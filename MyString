@@ -1,0 +1,133 @@
+#include <iostream>
+#include <assert.h>
+
+using namespace std;
+
+class MyString{
+public:
+	MyString()
+	{
+		_str = new char[1];
+		if (nullptr != _str)
+			myStrcpy(_str, "\0");
+	}
+
+	MyString(char* str)
+	{
+		if (str == nullptr){
+			_str = new char[1];
+			if (nullptr != _str)
+				myStrcpy(_str, " ");
+		}
+		else{
+			_str = new char[myStrlen(str) + 1];
+			if (nullptr != _str)
+				myStrcpy(_str, str);
+		}
+	}
+
+	int myStrlen(char* str){
+		char* ret = str;
+		while (*ret != '\0'){
+			ret++;
+		}
+		return ret - str;
+	}
+
+	char* myStrcpy(char* dest, const char* src){
+		assert(dest != nullptr && src != nullptr);
+		char* ret = dest;
+		const char* tmp = src;
+		while (*tmp != '\0')
+		{
+			*ret = *tmp;
+			ret++;
+			tmp++;
+		}
+		*ret = '\0';
+		return dest;
+	}
+
+
+
+	MyString& operator=(const MyString& str){
+		if (this == &str)
+			return *this;
+
+		if (nullptr != _str){
+			delete[] _str;
+			_str = nullptr;
+		}
+
+		_str = new char[myStrlen(str._str) + 1];
+		if (nullptr != str._str)
+			myStrcpy(_str, str._str);
+
+		return *this;
+	}
+
+	MyString& operator+(const MyString& str){
+		assert(nullptr != _str && nullptr != str._str);
+
+		int size = myStrlen(_str) + myStrlen(str._str) + 1;
+		char* res = new char[size];
+		memset(res, '\0', size);
+		char* pres = res;
+		
+		char* ret = _str;
+		const char* tmp = str._str;
+		
+		while (*ret != '\0'){
+			*pres = *ret;
+			pres++;
+			ret++;
+		}
+		while (*tmp != '\0'){
+			*pres = *tmp;
+			pres++;
+			tmp++;
+		}
+
+		delete[] _str;
+		_str = nullptr;
+		_str = new char[size];
+		if (nullptr != res)
+			myStrcpy(_str, res);
+		
+		delete[] res;
+		res = nullptr;
+
+		return *this;
+	}
+
+	friend ostream& operator<<(ostream& o, MyString& str){
+		if (nullptr == str._str)
+			return o;
+		return o << str._str;
+	}
+
+	~MyString()
+	{
+		if (nullptr != _str){
+			delete[] _str;
+			_str = nullptr;
+		}
+			
+	}
+
+private:
+	char* _str;
+};
+
+int main()
+{
+	MyString a;
+	MyString b("abcd");
+	MyString c("efgh");
+
+	a = b + c;
+	
+	cout << a << endl;
+
+	return 0;
+}
