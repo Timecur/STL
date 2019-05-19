@@ -1,67 +1,68 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
+#include <cstring>
 #include <assert.h>
 
 using namespace std;
 
+inline void SafeRelease(char* s)
+{
+	if (s != nullptr)
+	{
+		delete[]s;
+		s = nullptr;
+	}
+};
+
 class MyString{
 public:
-	MyString()
+	typedef char* Iterator;
+public:
+	MyString(const char* str = "")
 	{
-		_str = new char[1];
-		if (nullptr != _str)
-			myStrcpy(_str, "\0");
+		if (nullptr == str){
+			assert(false);
+			return;
+		}
+		
+		_size = myStrlen(str);
+		_capacity = _size;
+		_str = new char[_capacity + 1];
+		myStrcpy(_str, str);
 	}
 
-	MyString(char* str)
+	MyString(const MyString& str)
+		:_str(new char[str._capacity+1])
+		, _size(str._size)
+		, _capacity(str._capacity)
 	{
-		if (str == nullptr){
-			_str = new char[1];
-			if (nullptr != _str)
-				myStrcpy(_str, " ");
-		}
-		else{
-			_str = new char[myStrlen(str) + 1];
-			if (nullptr != _str)
-				myStrcpy(_str, str);
-		}
+		myStrcpy(_str, str._str);
 	}
 
-	int myStrlen(char* str){
-		char* ret = str;
-		while (*ret != '\0'){
-			ret++;
-		}
-		return ret - str;
-	}
-
-	char* myStrcpy(char* dest, const char* src){
-		assert(dest != nullptr && src != nullptr);
-		char* ret = dest;
-		const char* tmp = src;
-		while (*tmp != '\0')
+	/*
+	MyString& operator=(const MyString& s)
+	{
+		if (this != &s)
 		{
-			*ret = *tmp;
-			ret++;
-			tmp++;
-		}
-		*ret = '\0';
-		return dest;
-	}
-
-
-
-	MyString& operator=(const MyString& str){
-		if (this == &str)
-			return *this;
-
-		if (nullptr != _str){
+			char* pStr = new char[str._capacity + 1];
+			strcpy(pStr, s._str);
 			delete[] _str;
-			_str = nullptr;
+			_str = pStr;
+			_size = str._size;
+			_capacity = str._capacity;
 		}
-
-		_str = new char[myStrlen(str._str) + 1];
-		if (nullptr != str._str)
-			myStrcpy(_str, str._str);
+		return *this;
+	}
+	*/
+	
+	MyString& operator=(const MyString& str){
+		if (this != &str){
+			MyString str_tmp(str);
+			swap(_str, str_tmp._str);
+			
+			_size = str._size;
+			_capacity = str._capacity;
+		}
 
 		return *this;
 	}
@@ -100,12 +101,6 @@ public:
 		return *this;
 	}
 
-	friend ostream& operator<<(ostream& o, MyString& str){
-		if (nullptr == str._str)
-			return o;
-		return o << str._str;
-	}
-
 	~MyString()
 	{
 		if (nullptr != _str){
@@ -115,19 +110,275 @@ public:
 			
 	}
 
+	Iterator Begin(){
+		return _str;
+	}
+
+	Iterator End(){
+		return _str + _size;
+	}
+
+	void Push_back(char c){
+		if (_size == _capacity)
+			Reserve(_capacity * 2);
+		
+		_str[_size++] = c;
+		_str[_size] = '\0';
+	}
+
+	void Pop_back(){
+		assert(_size > 0);
+		_str[_size] == '\0';
+	}
+
+	void Append(size_t n, char c){
+		for (size_t i = 0; i < n; ++i)
+			Push_back(c);
+	}
+
+	void Append(const char* str){
+		assert(nullptr != str);
+		for (int i = 0; i < myStrlen(str); ++i){
+			Push_back(str[i]);
+		}
+	}
+
+	MyString& operator+=(char c){
+		Push_back(c);
+		return *this;
+	}
+
+	MyString& operator+=(const char* str){
+		assert(nullptr != str);
+		Append(str);
+		return *this;
+	}
+
+	void Clear(){
+		_size = 0;
+		_str[_size] = '\0';
+	}
+
+	void Swap(MyString& str){
+		swap(_str, str._str);
+		swap(_size, str._size);
+		swap(_capacity, str._capacity);
+	}
+
+	const char* C_str()const{
+		return _str;
+	}
+
+	size_t Size()const{
+		return _size;
+	}
+
+	size_t Capacity()const{
+		return _capacity;
+	}
+
+	bool Empty()const{
+		return 0 == _size;
+	}
+
+	void Resize(size_t newSize, char c = char()){
+		if (newSize > _size){
+			if (newSize > _capacity){
+				Reserve(newSize);
+			}
+			memset(_str + _size, c, newSize - _size);
+		}
+		_size = newSize;
+		_str[newSize] = '\0';
+	}
+
+	void Reserve(size_t newCapacity){
+		if (_capacity < newCapacity){
+			char* str = new char[newCapacity+1];
+			myStrcpy(str, _str);
+	
+			delete _str;
+			_str = str;
+			_capacity = newCapacity;
+		}
+	}
+
+	char& operator[](size_t index){
+		assert(index < _size);
+		return _str[index];
+	}
+
+	const char& operator[](size_t index)const{
+		assert(index < _size);
+		return _str[index];
+	}
+
+	bool operator<(const MyString& s){
+		char* sret = _str;
+		char* stmp = s._str;
+
+		while ('\0' != *sret++ && '\0' != *stmp++){
+			if (*sret > *stmp)
+				return false;
+			else if (*sret < *stmp)
+				return true;
+		}
+		return _size < s._size;
+	}
+	
+	bool operator<=(const MyString& s){
+		char* sret = _str;
+		char* stmp = s._str;
+
+		while ('\0' != *sret++ && '\0' != *stmp++){
+			if (*sret > *stmp)
+				return false;
+			else if (*sret < *stmp)
+				return true;
+		}
+		return _size <= s._size;
+	}
+	
+	bool operator>(const MyString& s){
+		char* sret = _str;
+		char* stmp = s._str;
+
+		while ('\0' != *sret++ && '\0' != *stmp++){
+			if (*sret < *stmp)
+				return false;
+			else if (*sret > *stmp)
+				return true;
+		}
+		return _size > s._size;
+	}
+
+	bool operator>=(const MyString& s){
+		char* sret = _str;
+		char* stmp = s._str;
+
+		while ('\0' != *sret++ && '\0' != *stmp++){
+			if (*sret < *stmp)
+				return false;
+			else if (*sret > *stmp)
+				return true;
+		}
+		return _size >= s._size;
+	}
+
+	bool operator==(const MyString& s){
+		char* sret = _str;
+		char* stmp = s._str;
+
+		while ('\0' != *sret++ && '\0' != *stmp++){
+			if (*sret != *stmp)
+				return false;
+		}
+		return _size == s._size;
+	}
+
+	bool operator!=(const MyString& s){
+		return !(*this == s);
+	}
+
+	size_t Find(char c, size_t pos = 0) const{
+		for (int i = pos; i < _size; ++i)
+			if (c == _str[i])
+				return i;
+		return -1;
+	}
+
+	size_t Find(const char* s, size_t pos = 0) const{
+
+	}
+
+	MyString SubStr(size_t pos, size_t n){
+		MyString str;
+		for (int i = pos; i < _size && i < n; ++i){
+			str.Push_back(_str[i]);
+		}
+		return str;
+	}
+
+	MyString& Insert(size_t pos, char c){
+		assert(pos <= _size);
+			
+		char* str = new char[_size+1];
+		myStrcpy(str, _str);
+
+		if (_size + 1 > _capacity)
+			Reserve(_size + 1);
+
+		_str[pos] = c;
+		_str[pos+1] = '\0';
+		strcat(_str, str+pos);
+
+		SafeRelease(str);
+		return *this;
+	}
+
+	MyString& Insert(size_t pos, const char* str){
+
+	}
+
+	MyString& Erase(size_t pos, size_t len){
+		assert(pos <= _size);
+
+		char* str = new char[_size+1];
+
+		if (pos + len < _size){
+			myStrcpy(str, _str + pos + len-1);
+			
+		}
+		_str[pos - 1] = '\0';
+		strcat(_str, str);
+		_size = myStrlen(_str);
+
+		SafeRelease(str);
+		return *this;
+	}
+
+
+private:
+	friend ostream& operator<<(ostream& o, MyString& str){
+			if (nullptr == str._str)
+				return o;
+			return o << str._str;
+	}
+private:
+	int myStrlen(const char* str){
+		const char* ret = str;
+		while (*ret != '\0'){
+			ret++;
+		}
+		return ret - str;
+	}
+
+	char* myStrcpy(char* dest, const char* src){
+		assert(dest != nullptr && src != nullptr);
+		char* ret = dest;
+		const char* tmp = src;
+		while (*tmp != '\0')
+		{
+			*ret = *tmp;
+			ret++;
+			tmp++;
+		}
+		*ret = '\0';
+		return dest;
+	}
+
 private:
 	char* _str;
+	size_t _capacity;
+	size_t _size;
 };
 
 int main()
 {
-	MyString a;
-	MyString b("abcd");
-	MyString c("efgh");
+	MyString s1("hello world !");
 
-	a = b + c;
-	
-	cout << a << endl;
+	cout << s1.Insert(5, 'w') << endl;
 
+	cout << s1.Erase(3, 4);
 	return 0;
 }
